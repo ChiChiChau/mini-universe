@@ -1,19 +1,341 @@
-<header>
-  <nav>
-    <a href="#home">Home</a>
-    <a href="#projekte">Projekte</a>
-    <a href="#kontakt">Kontakt</a>
-  </nav>
-</header>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mini Universe</title>
+  </head>
+  <body style="margin: 0; overflow: hidden; background: #000;">
+    <canvas id="scene" aria-label="Mini universe scene"></canvas>
 
-<section id="home">
-  <h2>Home</h2>
-</section>
+    <script>
+      const canvas = document.getElementById('scene');
+      const context = canvas.getContext('2d');
 
-<section id="projekte">
-  <h2>Projekte</h2>
-</section>
+      const camera = {
+        rotation: 0,
+        zoom: 1,
+        targetZoom: 1,
+        offsetX: 0,
+        offsetY: 0,
+        targetOffsetX: 0,
+        targetOffsetY: 0,
+      };
 
-<section id="kontakt">
-  <h2>Kontakt</h2>
-</section>
+      const state = {
+        isDragging: false,
+        lastX: 0,
+        lastY: 0,
+        systemAngle: Math.random() * Math.PI * 2,
+        orbitTime: 0,
+        focusedId: null,
+        zoomIndex: 1,
+      };
+
+      const settings = {
+        productOrbitRadius: 48,
+        rotationSpeed: 0.0012,
+        artistSpeed: 0.0022,
+        productSpeed: 0.004,
+        minZoom: 0.6,
+        maxZoom: 4,
+        hitboxScale: 2.6,
+        productPlaneAngle: -0.2,
+        artistCount: 7,
+        zoomPresets: [0.5, 1, 2, 4],
+        systemOrbitRadius: 90,
+        systemOrbitYScale: 0.7,
+      };
+
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+
+      function lerp(start, end, amount) {
+        return start + (end - start) * amount;
+      }
+
+      function drawCircle(x, y, radius, fill, stroke) {
+        context.beginPath();
+        context.arc(x, y, radius, 0, Math.PI * 2);
+        if (fill) {
+          context.fillStyle = fill;
+          context.fill();
+        }
+        if (stroke) {
+          context.strokeStyle = stroke;
+          context.stroke();
+        }
+      }
+
+      function rotatePoint(x, y, angle) {
+        return {
+          x: x * Math.cos(angle) - y * Math.sin(angle),
+          y: x * Math.sin(angle) + y * Math.cos(angle),
+        };
+      }
+
+      function randomBetween(min, max) {
+        return min + Math.random() * (max - min);
+      }
+
+      function focusZoomForRadius(radius) {
+        return clamp(4 - radius * 0.1, 2, settings.maxZoom);
+      }
+
+      const artistConfigs = [
+        { radius: 18, color: '#ffffff', orbitRadius: 180 },
+        { radius: 12, color: '#60a5fa', orbitRadius: 120 },
+        { radius: 11, color: '#f472b6', orbitRadius: 140 },
+        { radius: 10, color: '#a78bfa', orbitRadius: 160 },
+        { radius: 9, color: '#34d399', orbitRadius: 110 },
+        { radius: 10, color: '#fbbf24', orbitRadius: 150 },
+        { radius: 9, color: '#f97316', orbitRadius: 130 },
+      ].map((artist) => ({
+        ...artist,
+        orbitRadius: randomBetween(140, 320),
+        orbitYScale: randomBetween(0.45, 0.75),
+        planeAngle: randomBetween(-1, 1),
+        angleOffset: Math.random() * Math.PI * 2,
+        speed: settings.artistSpeed * randomBetween(0.7, 1.2),
+        products: Array.from({ length: Math.floor(randomBetween(2, 6)) }, () => ({
+          angleOffset: Math.random() * Math.PI * 2,
+          orbitRadius: randomBetween(
+            settings.productOrbitRadius * 0.7,
+            settings.productOrbitRadius * 1.35
+          ),
+          planeAngle: settings.productPlaneAngle + randomBetween(-0.5, 0.5),
+        })),
+      }));
+
+      function buildObjects() {
+        const systemX = 0;
+        const systemY = 0;
+
+        const objects = [
+          {
+            id: 'black-hole',
+            label: 'Black Hole',
+            x: systemX,
+            y: systemY,
+            radius: 36,
+            color: '#050505',
+            stroke: '#111',
+          },
+          {
+            id: 'system-star',
+            label: 'System Star',
+            x:
+              Math.cos(state.systemAngle) *
+              settings.systemOrbitRadius,
+            y:
+              Math.sin(state.systemAngle) *
+              settings.systemOrbitRadius *
+              settings.systemOrbitYScale,
+            radius: 12,
+            color: '#f5f5f5',
+          },
+        ];
+
+        artistConfigs.forEach((artist, artistIndex) => {
+          const artistAngle = state.orbitTime * artist.speed + artist.angleOffset;
+          const artistBaseX = Math.cos(artistAngle) * artist.orbitRadius;
+          const artistBaseY = Math.sin(artistAngle) * artist.orbitRadius * artist.orbitYScale;
+          const artistOrbit = rotatePoint(
+            artistBaseX,
+            artistBaseY,
+            artist.planeAngle
+          );
+          const artistX = systemX + artistOrbit.x;
+          const artistY = systemY + artistOrbit.y;
+
+          objects.push({
+            id: `artist-${artistIndex}`,
+            label: 'Artist',
+            x: artistX,
+            y: artistY,
+            radius: artist.radius,
+            color: artist.color,
+          });
+
+          artist.products.forEach((product, productIndex) => {
+            const productAngle = state.orbitTime * settings.productSpeed + product.angleOffset;
+            const productBaseX = Math.cos(productAngle) * product.orbitRadius;
+            const productBaseY = Math.sin(productAngle) * product.orbitRadius;
+            const productOrbit = rotatePoint(
+              productBaseX,
+              productBaseY,
+              product.planeAngle
+            );
+            objects.push({
+              id: `product-${artistIndex}-${productIndex}`,
+              label: 'Product',
+              x: artistX + productOrbit.x,
+              y: artistY + productOrbit.y,
+              radius: 5,
+              color: '#facc15',
+            });
+          });
+        });
+
+        return objects;
+      }
+
+      function drawScene() {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.fillStyle = '#000';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        camera.zoom = lerp(camera.zoom, camera.targetZoom, 0.08);
+        camera.offsetX = lerp(camera.offsetX, camera.targetOffsetX, 0.08);
+        camera.offsetY = lerp(camera.offsetY, camera.targetOffsetY, 0.08);
+
+        context.save();
+        context.translate(centerX, centerY);
+        context.scale(camera.zoom, camera.zoom);
+        context.translate(-camera.offsetX, -camera.offsetY);
+
+        const objects = buildObjects();
+        for (const object of objects) {
+          drawCircle(object.x, object.y, object.radius, object.color, object.stroke);
+        }
+
+        context.restore();
+
+        if (state.focusedId) {
+          const focused = objects.find((object) => object.id === state.focusedId);
+          if (focused) {
+            camera.targetOffsetX = focused.x;
+            camera.targetOffsetY = focused.y;
+          }
+        }
+
+        state.systemAngle += settings.rotationSpeed;
+        state.orbitTime += 1;
+
+        requestAnimationFrame(drawScene);
+      }
+
+      function toWorldCoordinates(clientX, clientY) {
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        return {
+          x: (clientX - centerX) / camera.zoom + camera.offsetX,
+          y: (clientY - centerY) / camera.zoom + camera.offsetY,
+        };
+      }
+
+      function pickObject(position, objects) {
+        let closest = null;
+        for (const object of objects) {
+          const dx = position.x - object.x;
+          const dy = position.y - object.y;
+          const distance = Math.hypot(dx, dy);
+          if (distance <= object.radius * settings.hitboxScale) {
+            closest = object;
+          }
+        }
+        return closest;
+      }
+
+      function focusOnObject(object) {
+        if (!object) {
+          camera.targetZoom = settings.zoomPresets[state.zoomIndex];
+          camera.targetOffsetX = camera.offsetX;
+          camera.targetOffsetY = camera.offsetY;
+          state.focusedId = null;
+          return;
+        }
+
+        if (state.focusedId === object.id) {
+          camera.targetZoom = settings.zoomPresets[state.zoomIndex];
+          camera.targetOffsetX = camera.offsetX;
+          camera.targetOffsetY = camera.offsetY;
+          state.focusedId = null;
+          return;
+        }
+
+        const zoomFactor = settings.zoomPresets[state.zoomIndex];
+        camera.targetZoom = clamp(
+          focusZoomForRadius(object.radius) * zoomFactor,
+          settings.minZoom,
+          settings.maxZoom
+        );
+        camera.targetOffsetX = object.x;
+        camera.targetOffsetY = object.y;
+        state.focusedId = object.id;
+      }
+
+      function onPointerDown(event) {
+        if (event.button !== 0) {
+          return;
+        }
+        state.isDragging = true;
+        state.lastX = event.clientX;
+        state.lastY = event.clientY;
+      }
+
+      function onPointerMove(event) {
+        if (!state.isDragging) {
+          return;
+        }
+        const deltaX = event.clientX - state.lastX;
+        const deltaY = event.clientY - state.lastY;
+        state.lastX = event.clientX;
+        state.lastY = event.clientY;
+        camera.targetOffsetX -= deltaX / camera.zoom;
+        camera.targetOffsetY -= deltaY / camera.zoom;
+      }
+
+      function onPointerUp() {
+        state.isDragging = false;
+      }
+
+      function onWheel(event) {
+        const delta = -event.deltaY * 0.001;
+        camera.targetZoom = clamp(camera.targetZoom + delta, settings.minZoom, settings.maxZoom);
+      }
+
+      function advanceZoomPreset() {
+        state.zoomIndex = (state.zoomIndex + 1) % settings.zoomPresets.length;
+        camera.targetZoom = clamp(
+          settings.zoomPresets[state.zoomIndex],
+          settings.minZoom,
+          settings.maxZoom
+        );
+      }
+
+      function onClick(event) {
+        const objects = buildObjects();
+        const worldPosition = toWorldCoordinates(event.clientX, event.clientY);
+        const picked = pickObject(worldPosition, objects);
+        advanceZoomPreset();
+        focusOnObject(picked);
+      }
+
+      function onContextMenu(event) {
+        event.preventDefault();
+        advanceZoomPreset();
+      }
+
+      window.addEventListener('resize', resizeCanvas);
+      canvas.addEventListener('mousedown', onPointerDown);
+      window.addEventListener('mousemove', onPointerMove);
+      window.addEventListener('mouseup', onPointerUp);
+      canvas.addEventListener('click', onClick);
+      canvas.addEventListener('wheel', onWheel, { passive: true });
+      canvas.addEventListener('contextmenu', onContextMenu);
+
+      resizeCanvas();
+      drawScene();
+    </script>
+  </body>
+</html>
