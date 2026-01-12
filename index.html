@@ -1,19 +1,126 @@
-<header>
-  <nav>
-    <a href="#home">Home</a>
-    <a href="#projekte">Projekte</a>
-    <a href="#kontakt">Kontakt</a>
-  </nav>
-</header>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mini Universe</title>
+  </head>
+  <body style="margin: 0; overflow: hidden; background: #000;">
+    <canvas id="scene" aria-label="Mini universe scene"></canvas>
 
-<section id="home">
-  <h2>Home</h2>
-</section>
+    <script>
+      const canvas = document.getElementById('scene');
+      const context = canvas.getContext('2d');
 
-<section id="projekte">
-  <h2>Projekte</h2>
-</section>
+      const camera = {
+        rotation: 0,
+        zoom: 1,
+      };
 
-<section id="kontakt">
-  <h2>Kontakt</h2>
-</section>
+      const state = {
+        isDragging: false,
+        lastX: 0,
+        systemAngle: 0,
+        planetAngle: 0,
+      };
+
+      const settings = {
+        systemOrbitRadius: 220,
+        systemOrbitYScale: 0.6,
+        planetOrbitRadius: 70,
+        planetOrbitYScale: 0.6,
+        rotationSpeed: 0.0015,
+        planetSpeed: 0.003,
+        minZoom: 0.6,
+        maxZoom: 2.4,
+      };
+
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+
+      function drawCircle(x, y, radius, fill, stroke) {
+        context.beginPath();
+        context.arc(x, y, radius, 0, Math.PI * 2);
+        if (fill) {
+          context.fillStyle = fill;
+          context.fill();
+        }
+        if (stroke) {
+          context.strokeStyle = stroke;
+          context.stroke();
+        }
+      }
+
+      function render() {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.fillStyle = '#000';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        context.save();
+        context.translate(centerX, centerY);
+        context.scale(camera.zoom, camera.zoom);
+        context.rotate(camera.rotation);
+
+        drawCircle(0, 0, 28, '#0a0a0a', '#222');
+
+        const systemX = Math.cos(state.systemAngle) * settings.systemOrbitRadius;
+        const systemY = Math.sin(state.systemAngle) * settings.systemOrbitRadius * settings.systemOrbitYScale;
+
+        drawCircle(systemX, systemY, 12, '#f5f5f5');
+
+        const planetX = systemX + Math.cos(state.planetAngle) * settings.planetOrbitRadius;
+        const planetY = systemY + Math.sin(state.planetAngle) * settings.planetOrbitRadius * settings.planetOrbitYScale;
+
+        drawCircle(planetX, planetY, 7, '#7dd3fc');
+
+        context.restore();
+
+        state.systemAngle += settings.rotationSpeed;
+        state.planetAngle += settings.planetSpeed;
+
+        requestAnimationFrame(render);
+      }
+
+      function onPointerDown(event) {
+        state.isDragging = true;
+        state.lastX = event.clientX;
+      }
+
+      function onPointerMove(event) {
+        if (!state.isDragging) {
+          return;
+        }
+        const deltaX = event.clientX - state.lastX;
+        state.lastX = event.clientX;
+        camera.rotation += deltaX * 0.005;
+      }
+
+      function onPointerUp() {
+        state.isDragging = false;
+      }
+
+      function onWheel(event) {
+        const delta = -event.deltaY * 0.001;
+        camera.zoom = clamp(camera.zoom + delta, settings.minZoom, settings.maxZoom);
+      }
+
+      window.addEventListener('resize', resizeCanvas);
+      canvas.addEventListener('mousedown', onPointerDown);
+      window.addEventListener('mousemove', onPointerMove);
+      window.addEventListener('mouseup', onPointerUp);
+      canvas.addEventListener('wheel', onWheel, { passive: true });
+
+      resizeCanvas();
+      render();
+    </script>
+  </body>
+</html>
