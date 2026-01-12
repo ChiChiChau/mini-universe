@@ -1,34 +1,33 @@
-# AGENTS.md — Statische HTML-Seite (GitHub Pages)
+# AGENTS.md — Static HTML (GitHub Pages)
 
-## Projekt-Beschreibung
-Dieses Repository enthält eine einfache Website.
-Die Website besteht aktuell nur aus einer Datei: index.html.
-Es wird GitHub Pages verwendet.
+## Project
+This repository contains a very simple static website.
+The website currently consists of a single file: index.html.
+It is deployed using GitHub Pages.
 
-## Wichtige Regel (sehr wichtig)
-- Arbeite NUR mit HTML.
-- Ändere oder erstelle NUR index.html.
-- Erstelle KEIN CSS.
-- Erstelle KEIN JavaScript.
-- Verwende KEINE Frameworks oder Generatoren.
+## Core Rules (very important)
+- Work with HTML only.
+- Modify or create ONLY index.html.
+- Do NOT create or modify CSS files.
+- Do NOT create or modify JavaScript files.
+- Do NOT use frameworks or generators.
 
-## Startseite (Entry Point)
-- Die Startseite ist index.html im Root-Ordner.
-- Wenn index.html existiert, ist DAS die einzige Datei, die geändert werden darf.
+## Entry Point
+- The website entry point is index.html located in the repository root.
+- If index.html exists, it is the only file that may be changed.
 
-## Arbeitsweise
-1) Öffne index.html.
-2) Verändere nur den HTML-Inhalt innerhalb dieser Datei.
-3) Halte den Code einfach und gut lesbar.
-4) Mache nur die Aufgabe, die explizit beschrieben wurde.
+## Workflow
+1) Open index.html.
+2) Apply the requested changes using plain, readable HTML.
+3) Keep changes minimal and focused.
+4) Do exactly what is requested — nothing more.
 
-## Definition von "fertig"
-Eine Aufgabe gilt als fertig, wenn:
-- index.html korrektes HTML enthält
-- die Seite im Browser angezeigt werden kann
-- keine anderen Dateien verändert wurden
+## Definition of Done
+A task is complete when:
+- index.html contains valid HTML
+- the page renders in a browser
+- no other files were modified
 
-## Ergebnis
-- Erstelle am Ende IMMER eine Pull Request
-- Beschreibe kurz, was in index.html geändert wurde
-
+## Output
+- Always create a Pull Request
+- Briefly summarize what was changed in index.html
