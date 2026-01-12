@@ -6,3 +6,6 @@
 - Are moons/products selectable in the same way as planets/artists?
 - What information should appear when zooming into an object?
 - Are there mobile or accessibility requirements?
+
+Assumption for MVP:
+- Use static, hardcoded objects for the prototype.
